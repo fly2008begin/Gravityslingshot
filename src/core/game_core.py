@@ -1,5 +1,7 @@
 import math
 from environment.physics import PhysicsEngine
+from config import *
+import random
 
 class GameCore:
     def __init__(self, env):
@@ -8,58 +10,89 @@ class GameCore:
         
     def reset(self):
         """重置游戏状态"""
-        # 初始化飞船速度和方向
-        angle_rad = math.radians(self.env.ship['angle'])
-        self.env.ship['velocity'] = [
-            self.env.ship['speed'] * math.cos(angle_rad),
-            -self.env.ship['speed'] * math.sin(angle_rad)  # y轴向下
-        ]
-        self.env.ship['fuel'] = 1000
-        self.env.ship['pos'] = [100, self.env.screen_height-100]
+
+        # 计算初始角度（弧度）
+        angle_rad = math.radians(SHIP_CONFIG['initial_angle'])
+
+        self.env.ship.update({
+            'pos': [100, SCREEN_HEIGHT-100],
+            'velocity': [
+                SHIP_CONFIG['initial_speed'] * math.cos(angle_rad),
+                -SHIP_CONFIG['initial_speed'] * math.sin(angle_rad)  # y轴向下
+            ],
+            'rotation': SHIP_CONFIG['initial_angle'],
+            'angle': SHIP_CONFIG['initial_angle']  # 添加angle字段
+        })
         
+        # 随机化目标初始位置
+        self.env.target['angle'] = random.uniform(0, 2*math.pi)
+        self.env.update_target_position()
+
     def update(self, actions):
         """更新游戏状态"""
-        ship = self.env.ship
+        # 更新目标位置
+        self.env.update_target_position()
         
-        # 计算推进器推力
-        thrust_x, thrust_y, fuel_cost = PhysicsEngine.apply_thrust(ship, actions)
-        ship['fuel'] = max(ship['fuel'] - fuel_cost, 0)
+        # 计算推力
+        thrust_x, thrust_y = PhysicsEngine.apply_thrust(self.env.ship, actions)
         
         # 计算引力
         gravity = PhysicsEngine.calculate_gravity(
-            ship['pos'],
+            self.env.ship['pos'],
             self.env.star['pos'],
             self.env.star['mass'],
-            self.env.G
+            GRAVITY_CONSTANT
         )
         
         # 更新速度
-        ship['velocity'][0] += (thrust_x + gravity[0]) * self.env.dt
-        ship['velocity'][1] += (thrust_y + gravity[1]) * self.env.dt
+        self.env.ship['velocity'][0] += (thrust_x + gravity[0]) * TIME_STEP
+        self.env.ship['velocity'][1] += (thrust_y + gravity[1]) * TIME_STEP
         
         # 更新位置
-        ship['pos'][0] += ship['velocity'][0] * self.env.dt
-        ship['pos'][1] += ship['velocity'][1] * self.env.dt
-        
+        self.env.ship['pos'][0] += self.env.ship['velocity'][0] * TIME_STEP
+        self.env.ship['pos'][1] += self.env.ship['velocity'][1] * TIME_STEP
+
         # 边界检测
-        if (ship['pos'][0] < 0 or ship['pos'][0] > self.env.screen_width or
-            ship['pos'][1] < 0 or ship['pos'][1] > self.env.screen_height):
+        ship = self.env.ship
+        if (ship['pos'][0] < 0 or ship['pos'][0] > SCREEN_WIDTH or
+            ship['pos'][1] < 0 or ship['pos'][1] > SCREEN_HEIGHT):
             return 'out_of_bounds'
-            
-        # 恒星碰撞检测
+        
+        # 碰撞检测
         distance_to_star = math.hypot(
-            ship['pos'][0] - self.env.star['pos'][0],
-            ship['pos'][1] - self.env.star['pos'][1]
+            self.env.ship['pos'][0] - self.env.star['pos'][0],
+            self.env.ship['pos'][1] - self.env.star['pos'][1]
         )
-        if distance_to_star < self.env.star['radius'] + ship['radius']:
+        if distance_to_star < self.env.star['radius'] + self.env.ship['radius']:
             return 'star_collision'
+
+            # 计算相对速度
+        target_vel = PhysicsEngine.calculate_orbital_velocity(
+            self.env.star['pos'],
+            self.env.target['orbit_radius'],
+            self.env.target['angular_speed']
+        )
+        rel_velocity = [
+            self.env.ship['velocity'][0] - target_vel[0],
+            self.env.ship['velocity'][1] - target_vel[1]
+        ]
+        rel_speed = math.hypot(*rel_velocity)
             
         # 目标达成检测
         distance_to_target = math.hypot(
-            ship['pos'][0] - self.env.target['pos'][0],
-            ship['pos'][1] - self.env.target['pos'][1]
+            self.env.ship['pos'][0] - self.env.target['pos'][0],
+            self.env.ship['pos'][1] - self.env.target['pos'][1]
         )
         if distance_to_target < self.env.target['radius']:
+            # 检查相对速度
+            if rel_speed > SUCCESS_CONDITIONS['max_speed']:
+                return f'collision:{rel_speed}m/s'  # 速度过快视为碰撞
+            
+            # 检查降落角度
+            angle_diff = abs(ship['rotation'] % 360 - 180)  # 理想角度是180度（底部向下）
+            if angle_diff > SUCCESS_CONDITIONS['max_angle_deviation']:
+                return 'bad_angle'
+            
             return 'success'
             
         return 'playing'
