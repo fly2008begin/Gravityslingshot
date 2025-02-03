@@ -31,6 +31,14 @@ class SpaceEnv:
             **TARGET_CONFIG
         }
         self.update_target_position()
+
+        # 初始化干扰行星
+        self.disturber = {
+            'orbit_angle': random.uniform(0, 2*math.pi),  # 公转角度
+            'rotation_angle': 0,                          # 自转角度
+            **DISTURBER_CONFIG
+        }
+        self.update_disturber_position()
         
         # 生成固定星空
         self.stars = self.generate_stars()
@@ -58,3 +66,19 @@ class SpaceEnv:
             brightness = random.randint(*STAR_BRIGHTNESS_RANGE)
             stars.append((x, y, size, brightness))
         return stars
+
+    def update_disturber_position(self):
+        """更新双星系统的位置和角度"""
+        # 公转运动
+        self.disturber['pos'] = PhysicsEngine.calculate_orbital_position(
+            self.star['pos'],
+            self.disturber['orbit_radius'],
+            self.disturber['orbit_angle']
+        )
+        self.disturber['orbit_angle'] += self.disturber['angular_speed']
+        
+        # 自转运动
+        self.disturber['rotation_angle'] = (
+            self.disturber['rotation_angle'] + 
+            self.disturber['rotation_speed']
+        ) % 360

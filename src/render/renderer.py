@@ -9,19 +9,33 @@ class GameRenderer:
     def __init__(self, env):
         self.env = env
         self.trail_points = []
-        self.trail_length = 300
+        self.trail_length = 600
         
         # 加载贴图
         self.textures = {}
         if USE_TEXTURES:
-            for obj in ['star', 'target', 'ship']:
+            for obj in ['star', 'target', 'ship', 'disturber']:  # 包括干扰行星
                 path = globals()[f"{obj.upper()}_CONFIG"]['texture']
                 if path:
                     img = pygame.image.load(path)
-                    self.textures[obj] = pygame.transform.smoothscale(
-                        img, 
-                        (2*globals()[f"{obj.upper()}_CONFIG"]['radius'],)*2
-                    )
+                    
+                    # 特殊处理干扰行星贴图
+                    if obj == 'disturber':
+                        # 获取原始贴图尺寸
+                        # 根据贴图原始比例缩放
+                        original_w, original_h = img.get_size()
+                        scale = DISTURBER_CONFIG['texture_scale']
+                        target_w = int(DISTURBER_CONFIG['radius'] * 2 * scale)
+                        target_h = int(target_w * (original_h/original_w))  # 保持比例
+                        self.textures['disturber'] = pygame.transform.smoothscale(img, (target_w, target_h))
+
+                    else:
+                        # 其他天体按原逻辑处理
+                        self.textures[obj] = pygame.transform.smoothscale(
+                            img, 
+                            (2 * globals()[f"{obj.upper()}_CONFIG"]['radius'],) * 2
+                        )
+
 
 
     def draw_background(self):
@@ -45,6 +59,25 @@ class GameRenderer:
             pygame.draw.circle(surface, (255, 255, 255, alpha), 
                              (glow_size, glow_size), glow_size)
             self.env.screen.blit(surface, (x-glow_size, y-glow_size))
+
+    def draw_disturber(self):
+        """绘制双星系统"""
+        d = self.env.disturber
+        if USE_TEXTURES and 'disturber' in self.textures:
+            # 旋转贴图
+            rotated = pygame.transform.rotate(self.textures['disturber'], d['rotation_angle'])
+            rect = rotated.get_rect(center=d['pos'])
+            self.env.screen.blit(rotated, rect)
+        else:
+            # 矢量图形模式
+            pygame.draw.circle(self.env.screen, d['color'], d['pos'], d['radius'])
+            # 绘制自转标记
+            angle_rad = math.radians(d['rotation_angle'])
+            marker = (
+                d['pos'][0] + d['radius']*math.cos(angle_rad),
+                d['pos'][1] - d['radius']*math.sin(angle_rad)
+            )
+            pygame.draw.line(self.env.screen, (0,0,0), d['pos'], marker, 2)
 
     def update_trail(self, ship_pos):
         """更新飞行轨迹"""
@@ -180,7 +213,7 @@ class GameRenderer:
         
         # 显示位置（目标右侧）
         text_x = target_pos[0] + self.env.target['radius'] + 20
-        text_y = target_pos[1]
+        text_y = target_pos[1] - 20
         
         # 颜色判断
         color = (173, 216, 230) if rel_speed < 5 else (255, 182, 193)
@@ -194,6 +227,38 @@ class GameRenderer:
         for i, text in enumerate(texts):
             surf = font.render(text, True, color)
             self.env.screen.blit(surf, (text_x, text_y + i*25))
+
+    def draw_target_decorations(self):
+        """绘制目标行星的装饰效果"""
+        target = self.env.target
+        center = target['pos']
+        radius = target['radius'] * 1.5  # 装饰圈半径
+        
+        # 获取与信息面板一致的颜色
+        ship_pos = self.env.ship['pos']
+        target_vel = PhysicsEngine.calculate_orbital_velocity(
+            self.env.star['pos'],
+            target['orbit_radius'],
+            target['angular_speed']
+        )
+        rel_velocity = [
+            self.env.ship['velocity'][0] - target_vel[0],
+            self.env.ship['velocity'][1] - target_vel[1]
+        ]
+        rel_speed = math.hypot(*rel_velocity)
+        color = (173, 216, 230) if rel_speed < 5 else (255, 182, 193)
+        
+        # 绘制四个对称半弧线
+        arc_radius = radius
+        arc_width = 3
+        for i in range(4):
+            start_angle = math.radians(i * 90 + 20)
+            end_angle = math.radians(i * 90 + 70)
+            pygame.draw.arc(self.env.screen, color,
+                        (center[0]-arc_radius, center[1]-arc_radius,
+                            arc_radius*2, arc_radius*2),
+                        start_angle, end_angle, arc_width)
+        
 
 
     def draw_predicted_trajectory(self, steps=100, dt=0.1):
@@ -244,14 +309,20 @@ class GameRenderer:
             pygame.draw.circle(self.env.screen, (255, 215, 0),
                              self.env.star['pos'], self.env.star['radius'])
         
-        # 绘制目标
+        # 绘制目标行星
         if USE_TEXTURES and 'target' in self.textures:
             rect = self.textures['target'].get_rect(center=self.env.target['pos'])
             self.env.screen.blit(self.textures['target'], rect)
         else:
             pygame.draw.circle(self.env.screen, (0, 255, 0),
-                             self.env.target['pos'], self.env.target['radius'])
+                            self.env.target['pos'], self.env.target['radius'])
+
+        # 新增：绘制目标装饰UI
+        self.draw_target_decorations()
         
+        # 绘制干扰行星
+        self.draw_disturber()
+
         # 绘制飞船
         self.draw_rotated_ship()
         

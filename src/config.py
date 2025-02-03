@@ -29,9 +29,26 @@ STAR_CONFIG = {
 TARGET_CONFIG = {
     'texture': os.path.join(ASSETS_PATH, 'images/planet.png') if USE_TEXTURES else None,
     'radius': 30,
-    'orbit_radius': 300,  # 轨道半径
+    'orbit_radius': 320,  # 轨道半径
     'angular_speed': 0.002,  # 角速度（弧度/帧）
     'color': (0, 255, 0)  # 绿色
+}
+
+#目标行星的装饰
+TARGET_DECORATION = {
+    'radius_ratio': 0.001,       # 相对目标半径的比例
+    'arc_width': 1,            # 弧线宽度
+    'speed_threshold': 5       # 颜色切换速度阈值
+}
+
+# 新增干扰行星配置
+DISTURBER_CONFIG = {
+    'texture': 'assets/images/double_asteroid.png',  # 包含双星的贴图
+    'radius': 30,                # 碰撞检测半径
+    'orbit_radius': 180,         # 公转轨道半径
+    'angular_speed': 0.005,      # 公转角速度（弧度/帧）
+    'rotation_speed': 1.2,       # 自转角速度（度/帧）
+    'texture_scale': 0.5         # 贴图显示缩放系数（相对碰撞半径）
 }
 
 # 飞船配置
@@ -82,7 +99,7 @@ THRUSTER_CONFIG = {
 
 SUCCESS_CONDITIONS = {
     'max_speed': 17.0,       # 最大允许相对速度
-    'max_angle_deviation':30  # 最大允许角度偏差（度）
+    'max_angle_deviation':45  # 最大允许角度偏差（度）
 }
 
 

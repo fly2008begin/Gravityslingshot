@@ -32,6 +32,7 @@ class GameCore:
         """更新游戏状态"""
         # 更新目标位置
         self.env.update_target_position()
+        self.env.update_disturber_position()
         
         # 计算推力
         thrust_x, thrust_y = PhysicsEngine.apply_thrust(self.env.ship, actions)
@@ -65,8 +66,16 @@ class GameCore:
         )
         if distance_to_star < self.env.star['radius'] + self.env.ship['radius']:
             return 'star_collision'
+        
+        # 干扰行星碰撞检测
+        distance = math.hypot(
+            self.env.ship['pos'][0] - self.env.disturber['pos'][0],
+            self.env.ship['pos'][1] - self.env.disturber['pos'][1]
+        )
+        if distance < self.env.disturber['radius'] + self.env.ship['radius']:
+            return 'disturber_collision'
 
-            # 计算相对速度
+        # 计算相对速度
         target_vel = PhysicsEngine.calculate_orbital_velocity(
             self.env.star['pos'],
             self.env.target['orbit_radius'],
