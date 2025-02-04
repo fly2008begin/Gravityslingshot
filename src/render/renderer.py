@@ -288,11 +288,75 @@ class GameRenderer:
                 color = (255, 100, 100, alpha)
                 pygame.draw.line(self.env.screen, color, points[i-1], points[i], 1)
 
+
+    def draw_orbit_decorations(self):
+        """绘制目标行星和干扰行星的轨道"""
+        # 目标行星轨道
+        self.draw_dashed_circle(
+            self.env.star['pos'], 
+            self.env.target['orbit_radius'], 
+            color=(173, 216, 230, 99),  # 浅蓝色，半透明
+            dash_length=15, 
+            gap_length=15
+        )
+        
+        # 干扰行星轨道
+        self.draw_dashed_circle(
+            self.env.star['pos'], 
+            self.env.disturber['orbit_radius'], 
+            color=(255, 182, 193, 99),  # 浅红色，半透明
+            dash_length=15, 
+            gap_length=15
+        )
+
+    def draw_dashed_circle(self, center, radius, color, dash_length, gap_length):
+        """
+        绘制虚线圆
+        :param center: 圆心 [x, y]
+        :param radius: 半径
+        :param color: 颜色 (R, G, B, A)
+        :param dash_length: 每段虚线长度
+        :param gap_length: 每段间隔长度
+        """
+        # 计算圆周长
+        circumference = 2 * math.pi * radius
+        num_segments = int(circumference / (dash_length + gap_length))
+        
+        # 绘制每段虚线
+        for i in range(num_segments):
+            start_angle = 2 * math.pi * i / num_segments
+            end_angle = 2 * math.pi * (i + dash_length / (dash_length + gap_length)) / num_segments
+            pygame.draw.arc(
+                self.env.screen, color,
+                (center[0] - radius, center[1] - radius, radius * 2, radius * 2),
+                start_angle, end_angle, 2
+            )
+
+    def draw_time_panel(self):
+        """绘制时间面板"""
+        elapsed_time = self.env.core.get_elapsed_time()
+        remaining_time = max(0, GAME_CONFIG['time_limit'] - elapsed_time)
+        
+        # 颜色：剩余时间不足时显示红色
+        color = (255, 0, 0) if remaining_time < GAME_CONFIG['warning_time'] else (255, 255, 255)
+        
+        # 显示时间
+        font = pygame.font.Font(None, 24)
+        text = font.render(f"Time: {int(remaining_time)}s", True, color)
+        self.env.screen.blit(text, (SCREEN_WIDTH - 120, 10))
+        
     def draw(self, actions):
         """主绘制方法"""
         self.env.screen.fill((0, 0, 0))
 
+        # 绘制时间面板
+        self.draw_time_panel()
+
         self.draw_background()
+
+        # 绘制轨道装饰
+        # self.draw_orbit_decorations()
+
         
         # 更新并绘制轨迹
         self.update_trail(self.env.ship['pos'])

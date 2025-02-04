@@ -9,7 +9,7 @@ class SpaceEnv:
 
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        
+        self.core = None  # 初始化时留空（会被GameCore覆盖）
         # 初始化恒星
         self.star = {
             'pos': [SCREEN_WIDTH//2, SCREEN_HEIGHT//2],

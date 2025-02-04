@@ -1,4 +1,5 @@
 import math
+import pygame
 from environment.physics import PhysicsEngine
 from config import *
 import random
@@ -6,8 +7,14 @@ import random
 class GameCore:
     def __init__(self, env):
         self.env = env
+        self.env.core = self  # 关键：将核心实例附加到环境对象
         self.reset()
         
+    def get_elapsed_time(self):
+        """获取已用时间（秒）"""
+        return (pygame.time.get_ticks() - self.start_time) / 1000
+
+    
     def reset(self):
         """重置游戏状态"""
 
@@ -28,11 +35,18 @@ class GameCore:
         self.env.target['angle'] = random.uniform(0, 2*math.pi)
         self.env.update_target_position()
 
+        self.start_time = pygame.time.get_ticks()# 记录游戏开始时间
+
     def update(self, actions):
         """更新游戏状态"""
         # 更新目标位置
         self.env.update_target_position()
         self.env.update_disturber_position()
+
+        # 检查时间限制
+        elapsed_time = self.get_elapsed_time()
+        if elapsed_time > GAME_CONFIG['time_limit']:
+            return 'timeout'
         
         # 计算推力
         thrust_x, thrust_y = PhysicsEngine.apply_thrust(self.env.ship, actions)

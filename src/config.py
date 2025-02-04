@@ -99,7 +99,7 @@ THRUSTER_CONFIG = {
 
 SUCCESS_CONDITIONS = {
     'max_speed': 17.0,       # 最大允许相对速度
-    'max_angle_deviation':45  # 最大允许角度偏差（度）
+    'max_angle_deviation':15  # 最大允许角度偏差（度）
 }
 
 
@@ -110,3 +110,7 @@ STAR_SIZE_RANGE = (1, 3) # 星星尺寸范围（像素）
 STAR_BRIGHTNESS_RANGE = (50, 255) # 亮度范围（0-255）
 BACKGROUND_SEED = 42     # 随机种子（固定此值可使星空不变）
 
+GAME_CONFIG = {
+    'time_limit': 300,  # 时间限制（秒）
+    'warning_time': 60  # 剩余时间警告阈值（秒）
+}
