@@ -7,8 +7,11 @@ from environment.physics import PhysicsEngine
 
 class SpaceEnv:
 
-    def __init__(self):
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    def __init__(self, headless=False): 
+        if not headless:
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        else:
+            self.screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.core = None  # 初始化时留空（会被GameCore覆盖）
         # 初始化恒星
         self.star = {
