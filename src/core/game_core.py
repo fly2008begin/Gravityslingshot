@@ -5,9 +5,10 @@ from config import *
 import random
 
 class GameCore:
-    def __init__(self, env):
+    def __init__(self, env, time_scale=1.0):  # 新增时间缩放参数
         self.env = env
-        self.env.core = self  # 关键：将核心实例附加到环境对象
+        self.env.core = self
+        self.time_scale = time_scale  # 时间加速系数
         self.reset()
         
     def get_elapsed_time(self):
